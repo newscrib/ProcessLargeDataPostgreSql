@@ -7,6 +7,7 @@
       "strict": true,
       "esModuleInterop": true,
       "skipLibCheck": true,
+      "strictNullChecks": false,
       "emitDecoratorMetadata": true,
       "experimentalDecorators": true
    }
