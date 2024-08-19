@@ -74,11 +74,46 @@ const processLargeDataByOrderById = async (): Promise<void> => {
     }
 }
 
+const processLargeDataBySkipAndTake = async (): Promise<void> => {
+    const start: number = performance.now();
+
+    try {
+        const userRepository = AppDataSource.getRepository(User)
+        let hasMore = true;
+        let offset = 0;
+        const limit = 1000;
+        let counter: number = 0;
+
+        while (hasMore) {
+            const [results, count] = await userRepository.findAndCount({
+                skip: offset,
+                take: limit,
+            });
+
+            if (results.length === 0) {
+                hasMore = false;
+            } else {
+                for (const row of results) {
+                    ++counter;
+                }
+
+                offset += limit;
+            }
+        }
+
+        const end: number = performance.now();
+        console.log(`Время выполнения processLargeDataBySkipAndTake: ${end - start} миллисекунд. Counter: ${counter}`);
+    } catch (error) {
+        console.error('Ошибка при обработке данных:', error);
+    }
+}
+
 const main = async (): Promise<void> => {
     await AppDataSource.initialize();
 
     await processLargeDataByCursor();
     await processLargeDataByOrderById();
+    await processLargeDataBySkipAndTake();
 };
 
 main().finally(async () => {

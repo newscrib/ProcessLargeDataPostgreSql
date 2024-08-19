@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm"
 
-@Entity()
+@Entity('users')
 export class User {
     /** @description Название таблицы */
     public static tableName = 'users'
