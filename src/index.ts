@@ -1,6 +1,7 @@
 import { AppDataSource } from "./data-source";
 import { User } from "./entity/User";
 import { QueryRunner } from "typeorm";
+import { once } from 'events';
 
 const processLargeDataByCursor = async (): Promise<void> => {
     const start = performance.now();
@@ -85,7 +86,7 @@ const processLargeDataBySkipAndTake = async (): Promise<void> => {
         let counter: number = 0;
 
         while (hasMore) {
-            const [results, count] = await userRepository.findAndCount({
+            const results= await userRepository.find({
                 skip: offset,
                 take: limit,
             });
@@ -108,12 +109,45 @@ const processLargeDataBySkipAndTake = async (): Promise<void> => {
     }
 }
 
+const processLargeDataByStream = async (): Promise<void> => {
+    const start: number = performance.now();
+
+    try {
+        const queryRunner: QueryRunner = AppDataSource.createQueryRunner();
+
+        let counter: number = 0;
+
+        const stream = await queryRunner.stream(`SELECT * FROM ${User.tableName};`);
+
+        stream.on('data', (row) => {
+            if (row) {
+                ++counter
+            }
+        });
+
+        stream.on('error', async (err) => {
+            console.error('Stream error:', err);
+            await queryRunner.release();
+        });
+
+        await once(stream, 'end');
+
+        await queryRunner.release();
+
+        const end: number = performance.now();
+        console.log(`Время выполнения processLargeDataByStream: ${end - start} миллисекунд. Counter: ${counter}`);
+    } catch (error) {
+        console.error('Ошибка при обработке данных:', error);
+    }
+}
+
 const main = async (): Promise<void> => {
     await AppDataSource.initialize();
 
     await processLargeDataByCursor();
     await processLargeDataByOrderById();
     await processLargeDataBySkipAndTake();
+    await processLargeDataByStream();
 };
 
 main().finally(async () => {
