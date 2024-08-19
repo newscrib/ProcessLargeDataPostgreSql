@@ -6,7 +6,6 @@ const processLargeDataByCursor = async (): Promise<void> => {
     const start = performance.now();
 
     try {
-        await AppDataSource.initialize();
         const queryRunner: QueryRunner = AppDataSource.createQueryRunner();
 
         await queryRunner.startTransaction();
@@ -34,18 +33,55 @@ const processLargeDataByCursor = async (): Promise<void> => {
         await queryRunner.commitTransaction();
 
         const end = performance.now();
-        console.log(`Время выполнения: ${end - start} миллисекунд. Counter: ${counter}`);
+        console.log(`Время выполнения processLargeDataByCursor: ${end - start} миллисекунд. Counter: ${counter}`);
     } catch (error) {
         console.error('Ошибка при обработке данных:', error);
-    } finally {
-        await AppDataSource.destroy();
     }
 };
 
+const processLargeDataByOrderById = async (): Promise<void> => {
+    const start: number = performance.now();
+
+    try {
+        const queryRunner: QueryRunner = AppDataSource.createQueryRunner();
+
+        let lastId: string | undefined = undefined;
+        const chunk: number = 1000;
+        let hasMore: boolean = true;
+        let counter: number = 0;
+
+        while (hasMore) {
+            const query = lastId
+                ? `SELECT * FROM ${User.tableName} WHERE id > $1 ORDER BY id ASC LIMIT $2`
+                : `SELECT * FROM ${User.tableName} ORDER BY id ASC LIMIT $1`;
+
+            const parameters = lastId ? [lastId, chunk] : [chunk];
+
+            const results: Array<{ id: string }> = await queryRunner.query(query, parameters);
+
+            if (results.length === 0) {
+                hasMore = false;
+            } else {
+                counter += results.length;
+                lastId = results[results.length - 1]['id'];
+            }
+        }
+
+        const end: number = performance.now();
+        console.log(`Время выполнения processLargeDataByOrderById: ${end - start} миллисекунд. Counter: ${counter}`);
+    } catch (error) {
+        console.error('Ошибка при обработке данных:', error);
+    }
+}
+
 const main = async (): Promise<void> => {
+    await AppDataSource.initialize();
+
     await processLargeDataByCursor();
+    await processLargeDataByOrderById();
 };
 
-main().finally(() => {
+main().finally(async () => {
+    await AppDataSource.destroy();
     console.log("Функция завершена.");
 });
