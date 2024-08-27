@@ -16,7 +16,10 @@
 
 3. **Запустите проект**:
     ```bash
-    ts-node src/index.ts
+    ts-node src/process-large-data.ts
+    ```
+   ```bash
+    ts-node src/update-large-data.ts
     ```
 
 ## processLargeDataByOrderById
